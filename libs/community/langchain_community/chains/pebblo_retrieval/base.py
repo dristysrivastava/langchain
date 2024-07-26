@@ -81,7 +81,7 @@ class PebbloRetrievalQA(Chain):
     _prompt_sent: bool = False  #: :meta private:
     """Flag to check if prompt payload has been sent."""
     _enable_prompt_gov: bool = True  #: :meta private:
-    """Flag to check if prompt governance payload has been sent."""
+    """Flag to check if prompt governance is enabled or not"""
 
     def _call(
         self,
