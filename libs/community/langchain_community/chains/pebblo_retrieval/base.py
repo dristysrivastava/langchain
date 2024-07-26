@@ -8,7 +8,7 @@ import inspect
 import json
 import logging
 from http import HTTPStatus
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests  # type: ignore
 from langchain.chains.base import Chain
@@ -531,7 +531,7 @@ class PebbloRetrievalQA(Chain):
             logger.warning("API key is missing for sending prompt to Pebblo cloud.")
             raise NameError("API key is missing for sending prompt to Pebblo cloud.")
 
-    def _check_prompt_validity(self, question: str) -> tuple[bool, Dict[str, Any]]:
+    def _check_prompt_validity(self, question: str) -> Tuple[bool, Dict[str, Any]]:
         """
         Check the validity of the given prompt using a remote classification service.
 
