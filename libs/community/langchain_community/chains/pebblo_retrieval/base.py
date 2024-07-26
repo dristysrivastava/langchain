@@ -105,16 +105,11 @@ class PebbloRetrievalQA(Chain):
         question = inputs[self.input_key]
         auth_context = inputs.get(self.auth_context_key, {})
         semantic_context = inputs.get(self.semantic_context_key, {})
-        
+
         is_valid_prompt, prompt_entities = self._check_prompt_validity(
             question, semantic_context
         )
         logger.info(f"is_valid_prompt {is_valid_prompt}")
-            # if is_valid_prompt is False:
-            #     return {
-            #         self.output_key: """Your prompt has some sensitive information.
-            #             Remove the senstitive information and try again !!!"""
-            #     }
 
         _run_manager = run_manager or CallbackManagerForChainRun.get_noop_manager()
         accepts_run_manager = (
@@ -150,8 +145,8 @@ class PebbloRetrievalQA(Chain):
             ],
             "prompt": {
                 "data": question,
-                "entities": prompt_entities["entities"],
-                "entityCount": prompt_entities["entityCount"],
+                "entities": prompt_entities.get("entities", {}),
+                "entityCount": prompt_entities.get("entityCount", 0),
                 "prompt_gov_enabled": self._enable_prompt_gov,
             },
             "response": {
@@ -196,16 +191,12 @@ class PebbloRetrievalQA(Chain):
         accepts_run_manager = (
             "run_manager" in inspect.signature(self._aget_docs).parameters
         )
-        
+
         is_valid_prompt, prompt_entities = self._check_prompt_validity(
             question, semantic_context
         )
         logger.info(f"is_valid_prompt {is_valid_prompt}")
-        if is_valid_prompt is False:
-            return {
-                self.output_key: """Your prompt has some sensitive information.  
-                    Remove the senstitive information and try again !!!"""
-            }
+
         if accepts_run_manager:
             docs = await self._aget_docs(
                 question, auth_context, semantic_context, run_manager=_run_manager
@@ -546,7 +537,7 @@ class PebbloRetrievalQA(Chain):
 
     def _check_prompt_validity(
         self, question: str, semantic_context: SemanticContext
-    ) -> bool:
+    ) -> tuple:
         """
         Check the validity of the given prompt using a remote classification service.
 
@@ -569,10 +560,10 @@ class PebbloRetrievalQA(Chain):
             "Content-Type": "application/json",
         }
         prompt_payload = {"prompt": question}
-        is_valid_prompt = True
+        is_valid_prompt: bool = True
         prompt_gov_api_url = f"{self.classifier_url}{PROMPT_GOV_URL}"
         pebblo_resp = None
-        prompt_entities = {"entities": {}, "entityCount": 0}
+        prompt_entities: dict = {"entities": {}, "entityCount": 0}
         if self.classifier_location == "local":
             try:
                 pebblo_resp = requests.post(
@@ -596,15 +587,7 @@ class PebbloRetrievalQA(Chain):
                     str(pebblo_resp.status_code),
                     pebblo_resp.json(),
                 )
-                logger.info(f"pebblo_resp.json() {pebblo_resp.json()}")
-
-                deny_list = semantic_context.pebblo_semantic_entities.deny
-
-                if pebblo_resp.json().get("entities") is not None:
-                    for value in deny_list:
-                        if value in prompt_entities:
-                            is_valid_prompt = False
-                            break
+                logger.debug(f"pebblo_resp.json() {pebblo_resp.json()}")
                 prompt_entities["entities"] = pebblo_resp.json().get("entities", {})
                 prompt_entities["entityCount"] = pebblo_resp.json().get(
                     "entityCount", 0
