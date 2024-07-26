@@ -106,9 +106,7 @@ class PebbloRetrievalQA(Chain):
         auth_context = inputs.get(self.auth_context_key, {})
         semantic_context = inputs.get(self.semantic_context_key, {})
 
-        is_valid_prompt, prompt_entities = self._check_prompt_validity(
-            question, semantic_context
-        )
+        is_valid_prompt, prompt_entities = self._check_prompt_validity(question)
         logger.info(f"is_valid_prompt {is_valid_prompt}")
 
         _run_manager = run_manager or CallbackManagerForChainRun.get_noop_manager()
@@ -192,9 +190,7 @@ class PebbloRetrievalQA(Chain):
             "run_manager" in inspect.signature(self._aget_docs).parameters
         )
 
-        is_valid_prompt, prompt_entities = self._check_prompt_validity(
-            question, semantic_context
-        )
+        is_valid_prompt, prompt_entities = self._check_prompt_validity(question)
         logger.info(f"is_valid_prompt {is_valid_prompt}")
 
         if accepts_run_manager:
@@ -535,24 +531,20 @@ class PebbloRetrievalQA(Chain):
             logger.warning("API key is missing for sending prompt to Pebblo cloud.")
             raise NameError("API key is missing for sending prompt to Pebblo cloud.")
 
-    def _check_prompt_validity(
-        self, question: str, semantic_context: SemanticContext
-    ) -> tuple:
+    def _check_prompt_validity(self, question: str) -> tuple[bool, Dict[str, Any]]:
         """
         Check the validity of the given prompt using a remote classification service.
 
-        This method sends a prompt to a remote classifier service to determine if it
-        contains any entities that are on a deny list,
-        as specified in the semantic context.
+        This method sends a prompt to a remote classifier service and return entities
+        present in prompt or not.
 
         Args:
             question (str): The prompt question to be validated.
-            semantic_context (SemanticContext): The semantic context
-            containing deny list entities.
 
         Returns:
             bool: True if the prompt is valid (does not contain deny list entities),
             False otherwise.
+            dict: The entities present in the prompt
         """
 
         headers = {
