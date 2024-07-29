@@ -8,10 +8,8 @@ import inspect
 import json
 import logging
 from http import HTTPStatus
-
 from importlib.metadata import version
 from typing import Any, Dict, List, Optional, Tuple
-
 
 import requests  # type: ignore
 from langchain.chains.base import Chain
