@@ -5,6 +5,7 @@ import logging
 import os
 import uuid
 from http import HTTPStatus
+from importlib.metadata import version
 from typing import Any, Dict, Iterator, List, Optional
 
 import requests  # type: ignore
@@ -20,6 +21,7 @@ from langchain_community.utilities.pebblo import (
     PLUGIN_VERSION,
     App,
     Doc,
+    Framework,
     IndexedDocument,
     generate_size_based_batches,
     get_full_path,
@@ -71,6 +73,7 @@ class PebbloSafeLoader(BaseLoader):
         self.classifier_url = classifier_url or CLASSIFIER_URL
         self.classifier_location = classifier_location
         self.batch_size = BATCH_SIZE_BYTES
+        self.loader_details_updated = False
         self.loader_details = {
             "loader": loader_name,
             "source_path": self.source_path,
@@ -183,11 +186,16 @@ class PebbloSafeLoader(BaseLoader):
         for doc in doc_content:
             doc_metadata = doc.get("metadata", {})
             doc_authorized_identities = doc_metadata.get("authorized_identities", [])
-            doc_source_path = get_full_path(
-                doc_metadata.get(
-                    "full_path", doc_metadata.get("source", self.source_path)
+            if self.loader.__class__.__name__ == "SharePointLoader":
+                doc_source_path = get_full_path(
+                    doc_metadata.get("source", self.source_path)
                 )
-            )
+            else:
+                doc_source_path = get_full_path(
+                    doc_metadata.get(
+                        "full_path", doc_metadata.get("source", self.source_path)
+                    )
+                )
             doc_source_owner = doc_metadata.get(
                 "owner", PebbloSafeLoader.get_file_owner_from_path(doc_source_path)
             )
@@ -217,6 +225,12 @@ class PebbloSafeLoader(BaseLoader):
                     ),
                 }
             )
+        if (
+            self.loader.__class__.__name__ == "SharePointLoader"
+            and not self.loader_details_updated
+        ):
+            self.loader_details["source_path"] = doc_metadata.get("source_full_url")
+            self.loader_details_updated = True
         payload: Dict[str, Any] = {
             "name": self.app_name,
             "owner": self.owner,
@@ -431,6 +445,10 @@ class PebbloSafeLoader(BaseLoader):
             runtime=runtime,
             framework=framework,
             plugin_version=PLUGIN_VERSION,
+            client_version=Framework(
+                name="langchain_community",
+                version=version("langchain_community"),
+            ),
         )
         return app
 
@@ -551,11 +569,16 @@ class PebbloSafeLoader(BaseLoader):
         """Add Pebblo specific metadata to documents."""
         for doc in self.docs_with_id:
             doc_metadata = doc.metadata
-            doc_metadata["full_path"] = get_full_path(
-                doc_metadata.get(
-                    "full_path", doc_metadata.get("source", self.source_path)
+            if self.loader.__class__.__name__ == "SharePointLoader":
+                doc_metadata["full_path"] = get_full_path(
+                    doc_metadata.get("source", self.source_path)
                 )
-            )
+            else:
+                doc_metadata["full_path"] = get_full_path(
+                    doc_metadata.get(
+                        "full_path", doc_metadata.get("source", self.source_path)
+                    )
+                )
             doc_metadata["pb_id"] = doc.pb_id
             doc_metadata["pb_checksum"] = classified_docs.get(doc.pb_id, {}).get(
                 "pb_checksum", None
