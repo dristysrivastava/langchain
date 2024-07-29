@@ -82,7 +82,7 @@ class PebbloRetrievalQA(Chain):
     """Flag to check if discover payload has been sent."""
     _prompt_sent: bool = False  #: :meta private:
     """Flag to check if prompt payload has been sent."""
-    _enable_prompt_gov: bool = True  #: :meta private:
+    enable_prompt_gov: bool = True  #: :meta private:
     """Flag to check if prompt governance is enabled or not"""
 
     def _call(
@@ -107,7 +107,6 @@ class PebbloRetrievalQA(Chain):
         question = inputs[self.input_key]
         auth_context = inputs.get(self.auth_context_key, {})
         semantic_context = inputs.get(self.semantic_context_key, {})
-
         is_valid_prompt, prompt_entities = self._check_prompt_validity(question)
         logger.info(f"is_valid_prompt {is_valid_prompt}")
 
@@ -146,7 +145,7 @@ class PebbloRetrievalQA(Chain):
                 "data": question,
                 "entities": prompt_entities.get("entities", {}),
                 "entityCount": prompt_entities.get("entityCount", 0),
-                "prompt_gov_enabled": self._enable_prompt_gov,
+                "prompt_gov_enabled": self.enable_prompt_gov,
             },
             "response": {
                 "data": answer,
