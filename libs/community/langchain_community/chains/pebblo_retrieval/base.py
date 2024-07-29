@@ -111,7 +111,6 @@ class PebbloRetrievalQA(Chain):
         is_valid_prompt, prompt_entities = self._check_prompt_validity(question)
         logger.info(f"is_valid_prompt {is_valid_prompt}")
 
-        _run_manager = run_manager or CallbackManagerForChainRun.get_noop_manager()
         accepts_run_manager = (
             "run_manager" in inspect.signature(self._get_docs).parameters
         )
